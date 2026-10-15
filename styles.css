@@ -244,7 +244,6 @@ h3 {
 
 /* Focus */
 :focus-visible,
-.seg input:focus-visible + .seg__label,
 .tile:focus-visible .tile__face {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -496,8 +495,7 @@ h3 {
 .verbs {
   display: flex;
   flex-wrap: wrap;
-  row-gap: var(--s2);
-  column-gap: var(--s1);
+  gap: var(--s1);
   margin-top: var(--s2);
 }
 
@@ -540,40 +538,6 @@ h3 {
   color: var(--line-strong);
   background: transparent;
   border-color: var(--ink-2);
-}
-
-/* Segmented control */
-.seg {
-  display: flex;
-  flex: 1 0 100%;
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
-}
-
-.seg__label {
-  flex: 1 1 0;
-  min-width: 112px;
-  padding: 7px 24px;
-  font-weight: 600;
-  text-align: center;
-  cursor: pointer;
-  transition:
-    background-color var(--dur-ui) var(--ease-ui),
-    color var(--dur-ui) var(--ease-ui);
-}
-
-.seg__label:first-of-type {
-  border-radius: var(--radius-inner) 0 0 var(--radius-inner);
-}
-
-.seg__label:last-of-type {
-  border-radius: 0 var(--radius-inner) var(--radius-inner) 0;
-}
-
-.seg input:checked + .seg__label {
-  color: var(--bg);
-  background: var(--ink);
 }
 
 /* Status line: one fixed row, so a label that wraps never moves the page */
@@ -718,8 +682,7 @@ html.js .tile.is-lifted {
 }
 
 /* Locked for a run */
-.btn:disabled,
-.seg:disabled {
+.btn:disabled {
   color: var(--ink-2);
   border-color: var(--line);
   cursor: default;
@@ -727,14 +690,6 @@ html.js .tile.is-lifted {
 
 .btn:disabled .kbd {
   border-color: var(--line);
-}
-
-.seg:disabled .seg__label {
-  cursor: default;
-}
-
-.seg:disabled input:checked + .seg__label {
-  background: var(--ink-2);
 }
 
 /* Theme cross-fade, scoped to a deliberate toggle and never on *, which would
@@ -745,8 +700,6 @@ html.theming .lede,
 html.theming .hint,
 html.theming .board,
 html.theming .btn,
-html.theming .seg,
-html.theming .seg__label,
 html.theming .kbd,
 html.theming .tile__face::before,
 html.theming .section,
@@ -827,14 +780,8 @@ html:not(.js) .hint {
   }
 }
 
-/* Forced colours: system colours for the chosen sort, the marker and dots */
+/* Forced colours: system colours for the marker and dots */
 @media (forced-colors: active) {
-  .seg input:checked + .seg__label {
-    forced-color-adjust: none;
-    color: HighlightText;
-    background: Highlight;
-  }
-
   .slot-marker {
     outline: 2px solid Highlight;
     outline-offset: -2px;
@@ -848,8 +795,7 @@ html:not(.js) .hint {
 
 /* Coarse pointers: taller verb buttons */
 @media (pointer: coarse) {
-  .verbs .btn,
-  .seg__label {
+  .verbs .btn {
     padding-top: 11px;
     padding-bottom: 11px;
   }
@@ -898,13 +844,6 @@ html:not(.js) .hint {
 }
 
 /* Breakpoints, ascending: layout and tokens only */
-@media (min-width: 480px) {
-  .seg {
-    flex: 0 0 auto;
-    margin-left: auto;
-  }
-}
-
 @media (min-width: 600px) {
   :root {
     --gutter: 24px;
@@ -924,7 +863,7 @@ html:not(.js) .hint {
 
   .keys {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(4, 1fr);
+    grid-template-rows: repeat(3, 1fr);
     grid-auto-flow: column;
     column-gap: var(--s4);
   }

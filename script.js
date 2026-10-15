@@ -50,8 +50,6 @@
   // Pure helpers
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const pad2 = (n) => String(n).padStart(2, "0");
-  const homeIndex = (tile, sort) =>
-    sort === "colour" ? tile.shade * COLS + tile.hue : tile.id;
   const slotXY = (index, g) => ({
     x: g.inset + (index % COLS) * (g.tile + g.gap),
     y: g.inset + Math.floor(index / COLS) * (g.tile + g.gap),
@@ -97,7 +95,6 @@
 
   // State and tile collection
   const state = {
-    sort: "number",
     scatterCount: 0,
     nudgeCount: 0,
     zTop: COUNT,
@@ -105,7 +102,6 @@
     drag: null,
     tabbable: null,
     raised: null,
-    order: [],
     tick: null,
     shown: null,
     side: 0,
@@ -131,7 +127,7 @@
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const darkScheme = matchMedia("(prefers-color-scheme: dark)");
   const freeTravel = () => state.side - 2 * BORDER - state.tile;
-  const homeSlot = (tile) => slotXY(homeIndex(tile, state.sort), state);
+  const homeSlot = (tile) => slotXY(tile.id, state);
   const allHome = () => tiles.every((t) => t.status === "home");
   const allLoose = () => tiles.every((t) => t.status === "loose");
   const inRun = () => run.phase === "pretidy" || run.phase === "running";
@@ -249,10 +245,6 @@
     });
   }
 
-  function renderSort() {
-    dom.sorts[state.sort].checked = true;
-  }
-
   function renderBest() {
     dom.best.textContent = run.best ? secs(run.best) : "none yet";
   }
@@ -320,10 +312,9 @@
     vibrate(8);
   }
 
-  // Tidy timing, staggered by home index, which also sorts the stacking order
+  // Tidy timing, staggered by id, which also sorts the stacking order
   function glideHome(tile) {
-    const idx = homeIndex(tile, state.sort);
-    setHome(tile, { ...motion("tidy", "snap", idx), z: idx + 1 });
+    setHome(tile, { ...motion("tidy", "snap", tile.id), z: tile.id + 1 });
   }
 
   function placeScatter(m) {
@@ -435,22 +426,6 @@
     renderStatus();
   }
 
-  function setSort(sort) {
-    if (sort === state.sort) return;
-    if (state.drag) endDrag("cancel");
-    state.sort = sort;
-    renderSort();
-    tiles.forEach((tile) => {
-      if (tile.status === "home") glideHome(tile);
-    });
-    // Tiles mid-Tidy glide again in full, so the fallback starts over
-    if (state.tick) armTick();
-    buildOrder();
-    syncFocus();
-    announce(`Sorted by ${sort}.`);
-    writeHash();
-  }
-
   // Keep it tidy
   function readBest() {
     try {
@@ -469,10 +444,10 @@
     }
   }
 
-  // Scatter, Play and the sort lock for the run; a focused one hands focus
-  // to the board first, before the browser can drop it to body
+  // Scatter and Play lock for the run; a focused one hands focus to the
+  // board first, before the browser can drop it to body
   function lockControls(lock) {
-    const locks = [dom.scatter, dom.play, dom.seg];
+    const locks = [dom.scatter, dom.play];
     const held = locks.some((el) => el.contains(document.activeElement));
     locks.forEach((el) => (el.disabled = lock));
     if (lock && held) state.tabbable.el.focus();
@@ -693,9 +668,9 @@
     if (e.target.matches(EDITABLE)) return;
     const el = e.target.closest(".tile");
     if (el && (key in STEP || key === "Home" || key === "End")) {
-      const i = state.order.indexOf(tiles[el.dataset.id]);
+      const i = Number(el.dataset.id);
       const to = key === "Home" ? 0 : key === "End" ? COUNT - 1 : i + STEP[key];
-      state.order[clamp(to, 0, COUNT - 1)].el.focus();
+      tiles[clamp(to, 0, COUNT - 1)].el.focus();
     } else if (el && (key === "Space" || key === "Enter"))
       tap(tiles[el.dataset.id]);
     else if (e.repeat) return;
@@ -703,8 +678,6 @@
     else if (inRun()) return;
     else if (key === "s") scatter();
     else if (key === "p") play();
-    else if (key === "1") setSort("number");
-    else if (key === "2") setSort("colour");
     else return;
     e.preventDefault();
   }
@@ -712,11 +685,6 @@
   function onBlur() {
     dom.kbds.forEach((_, key) => pressKeycap(key, false));
     if (state.drag) endDrag(state.drag.lifted ? "drop" : "abandon");
-  }
-
-  function buildOrder() {
-    const key = (tile) => homeIndex(tile, state.sort);
-    state.order = [...tiles].sort((a, b) => key(a) - key(b));
   }
 
   // The roving tabindex follows focus however it arrived, by key or pointer
@@ -737,7 +705,6 @@
     const n = /^\d+$/.test(mess) ? Number(mess) : 0;
     const prepared = params.get("play");
     const p = /^\d+$/.test(prepared) ? Number(prepared) : 0;
-    if (params.get("sort") === "colour") state.sort = "colour";
     if (n >= 1 && n <= SEED_MAX) {
       state.scatterCount = n;
       state.messActive = true;
@@ -758,7 +725,6 @@
     const parts = [];
     if (state.messActive) parts.push(`mess=${state.scatterCount}`);
     if (run.phase !== "idle") parts.push(`play=${run.n}`);
-    if (state.sort === "colour") parts.push("sort=colour");
     const hash = parts.length ? `#${parts.join("&")}` : "";
     if (hash === location.hash) return;
     history.replaceState(null, "", location.pathname + location.search + hash);
@@ -826,17 +792,11 @@
     dom.scatter = $(".btn--scatter");
     dom.tidy = $(".btn--tidy");
     dom.play = $(".btn--play");
-    dom.seg = $(".seg");
     dom.best = $("[data-best]");
     dom.theme = $(".btn--theme");
     dom.copy = $(".status__copy");
     dom.icon = $("link[rel='icon']");
     dom.stats = [...document.querySelectorAll("[data-stat]")];
-    dom.sorts = {};
-    document.querySelectorAll("input[name='sort']").forEach((r) => {
-      dom.sorts[r.value] = r;
-      r.addEventListener("change", () => setSort(r.value));
-    });
     dom.kbds = new Map();
     document.querySelectorAll("kbd[data-key]").forEach((el) => {
       const list = dom.kbds.get(el.dataset.key) || [];
@@ -850,32 +810,22 @@
     dom.line = [text(), dom.time, text(), dom.count, text()];
     $("#board-status").replaceChildren(...dom.line);
     document.querySelectorAll(".tile").forEach((el) => {
-      const { id, hue, shade } = el.dataset;
-      tiles.push({
-        el,
-        id: Number(id),
-        hue: Number(hue),
-        shade: Number(shade),
-        status: "home",
-      });
+      tiles.push({ el, id: Number(el.dataset.id), status: "home" });
     });
     state.tabbable = tiles[0];
     state.tabbable.el.tabIndex = 0;
     run.best = readBest();
     renderBest();
     readHash();
-    buildOrder();
     layout();
     if (state.messActive) placeScatter(STILL);
-    else
-      state.order.forEach((tile, i) => setHome(tile, { ...STILL, z: i + 1 }));
+    else tiles.forEach((tile, i) => setHome(tile, { ...STILL, z: i + 1 }));
     // A seeded page may already be painted: its hand-off is drawn, not faded
     const verbs = [dom.scatter, dom.tidy, dom.play];
     verbs.forEach((b) => (b.style.transition = "none"));
     renderStatus();
     void dom.tidy.offsetWidth;
     verbs.forEach((b) => (b.style.transition = ""));
-    renderSort();
     renderTheme();
     dom.board.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);

@@ -23,8 +23,8 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cstyle%3Erect%7Bfill:%231a1a1a%7D@media(prefers-color-scheme:dark)%7Brect%7Bfill:%23f2f2f0%7D%7D%3C/style%3E%3Crect x='1' y='1' width='6' height='6'/%3E%3Crect x='9' y='1' width='6' height='6'/%3E%3Crect x='1' y='9' width='6' height='6'/%3E%3Crect x='9' y='9' width='6' height='6'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="./styles.css?v=2" />
-    <script src="./script.js?v=2"></script>
+    <link rel="stylesheet" href="./styles.css?v=3" />
+    <script src="./script.js?v=3"></script>
   </head>
   <body>
     <a class="skip" href="#board">Skip to the board</a>
@@ -504,26 +504,6 @@
             <button type="button" class="btn btn--play">
               Play <kbd class="kbd" data-key="p" aria-hidden="true">P</kbd>
             </button>
-            <fieldset class="seg">
-              <legend class="sr-only">Sort by</legend>
-              <input
-                class="sr-only"
-                type="radio"
-                name="sort"
-                id="sort-number"
-                value="number"
-                checked
-              />
-              <label class="seg__label" for="sort-number">Number</label>
-              <input
-                class="sr-only"
-                type="radio"
-                name="sort"
-                id="sort-colour"
-                value="colour"
-              />
-              <label class="seg__label" for="sort-colour">Colour</label>
-            </fieldset>
           </div>
           <figcaption class="status">
             <span id="board-status">All 36 in place.</span>
@@ -543,10 +523,10 @@
             </div>
             <h3>Every tile has one home.</h3>
             <p>
-              Where a tile belongs depends on the sort. Change the sort and the
-              homes move; tiles that are home go with them. Tiles that are loose
-              stay exactly where they are. Moving a mess around is not the same
-              as tidying it.
+              Tile 01 lives top left, tile 36 bottom right, and the rest read
+              like a page. A loose tile stays exactly where it was left until
+              something sends it home. Moving a mess around is not the same as
+              tidying it.
             </p>
           </div>
           <div class="rule">
@@ -611,13 +591,6 @@
           </div>
           <div class="keys__row">
             <dt>
-              <kbd class="kbd" data-key="1">1</kbd>
-              <kbd class="kbd" data-key="2">2</kbd>
-            </dt>
-            <dd>Sort by number, or by colour</dd>
-          </div>
-          <div class="keys__row">
-            <dt>
               <kbd class="kbd" data-key="ArrowLeft">←</kbd>
               <kbd class="kbd" data-key="ArrowUp">↑</kbd>
               <kbd class="kbd" data-key="ArrowRight">→</kbd>
@@ -646,7 +619,7 @@
           Gap&nbsp;<span data-stat="gap">8</span>&nbsp;px&nbsp;·
           Board&nbsp;<span data-stat="side">480</span>&nbsp;px&nbsp;·
           36&nbsp;tiles&nbsp;· 3&nbsp;files&nbsp;· 0&nbsp;requests&nbsp;·
-          72&nbsp;KB
+          68&nbsp;KB
         </p>
         <p>
           No framework, no build step, no fonts fetched, nothing tracked. Your
