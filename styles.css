@@ -496,7 +496,8 @@ h3 {
 .verbs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s1);
+  row-gap: var(--s2);
+  column-gap: var(--s1);
   margin-top: var(--s2);
 }
 
@@ -552,7 +553,8 @@ h3 {
 
 .seg__label {
   flex: 1 1 0;
-  padding: 7px 16px;
+  min-width: 112px;
+  padding: 7px 24px;
   font-weight: 600;
   text-align: center;
   cursor: pointer;
