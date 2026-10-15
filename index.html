@@ -1,0 +1,603 @@
+<!-- [html-validate-disable doctype-style, void-style -- Prettier prints a lowercase doctype and self-closing void tags] -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Putaway</title>
+    <meta
+      name="description"
+      content="Thirty-six tiles, one home each. Make a mess, then put it away."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: light)"
+      content="#F6F5F2"
+    />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: dark)"
+      content="#121212"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cstyle%3Erect%7Bfill:%231a1a1a%7D@media(prefers-color-scheme:dark)%7Brect%7Bfill:%23f2f2f0%7D%7D%3C/style%3E%3Crect x='1' y='1' width='6' height='6'/%3E%3Crect x='9' y='1' width='6' height='6'/%3E%3Crect x='1' y='9' width='6' height='6'/%3E%3Crect x='9' y='9' width='6' height='6'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./script.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#board">Skip to the board</a>
+    <header class="site-header wrap">
+      <a class="wordmark" href="#top">
+        <svg
+          class="wordmark__mark"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <rect x="1" y="1" width="6" height="6" />
+          <rect x="9" y="1" width="6" height="6" />
+          <rect x="1" y="9" width="6" height="6" />
+          <rect x="9" y="9" width="6" height="6" />
+        </svg>
+        Putaway
+      </a>
+      <button
+        type="button"
+        class="btn btn--theme"
+        aria-label="Switch to dark theme"
+      >
+        <svg
+          class="btn__glyph"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <rect
+            x="0.75"
+            y="0.75"
+            width="14.5"
+            height="14.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          />
+          <rect x="0.75" y="0.75" width="7.25" height="14.5" />
+        </svg>
+      </button>
+    </header>
+    <main id="top" class="wrap">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero__text">
+          <h1 id="hero-title">Make a mess. Then put it away.</h1>
+          <p class="lede">
+            Thirty-six tiles, one home each. Drag them anywhere. Press Tidy and
+            watch every one go back where it belongs.
+          </p>
+          <p class="hint hint--fine">Or press S, then T.</p>
+          <p class="hint hint--coarse">
+            Tap a tile to knock it loose. Tap it again to send it home. Hold one
+            to drag it.
+          </p>
+        </div>
+        <figure class="figure">
+          <div
+            class="board"
+            id="board"
+            role="group"
+            aria-label="Thirty-six tiles"
+            aria-describedby="board-status"
+            tabindex="-1"
+          >
+            <!-- Tile colours: p = (i * 11) % 36; hue = p % 6; shade = floor(p / 6) -->
+            <button
+              type="button"
+              class="tile"
+              data-id="0"
+              data-hue="0"
+              data-shade="0"
+              aria-label="Tile 01, in place"
+            >
+              <span class="tile__face"><span class="tile__num">01</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="1"
+              data-hue="5"
+              data-shade="1"
+              aria-label="Tile 02, in place"
+            >
+              <span class="tile__face"><span class="tile__num">02</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="2"
+              data-hue="4"
+              data-shade="3"
+              aria-label="Tile 03, in place"
+            >
+              <span class="tile__face"><span class="tile__num">03</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="3"
+              data-hue="3"
+              data-shade="5"
+              aria-label="Tile 04, in place"
+            >
+              <span class="tile__face"><span class="tile__num">04</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="4"
+              data-hue="2"
+              data-shade="1"
+              aria-label="Tile 05, in place"
+            >
+              <span class="tile__face"><span class="tile__num">05</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="5"
+              data-hue="1"
+              data-shade="3"
+              aria-label="Tile 06, in place"
+            >
+              <span class="tile__face"><span class="tile__num">06</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="6"
+              data-hue="0"
+              data-shade="5"
+              aria-label="Tile 07, in place"
+            >
+              <span class="tile__face"><span class="tile__num">07</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="7"
+              data-hue="5"
+              data-shade="0"
+              aria-label="Tile 08, in place"
+            >
+              <span class="tile__face"><span class="tile__num">08</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="8"
+              data-hue="4"
+              data-shade="2"
+              aria-label="Tile 09, in place"
+            >
+              <span class="tile__face"><span class="tile__num">09</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="9"
+              data-hue="3"
+              data-shade="4"
+              aria-label="Tile 10, in place"
+            >
+              <span class="tile__face"><span class="tile__num">10</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="10"
+              data-hue="2"
+              data-shade="0"
+              aria-label="Tile 11, in place"
+            >
+              <span class="tile__face"><span class="tile__num">11</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="11"
+              data-hue="1"
+              data-shade="2"
+              aria-label="Tile 12, in place"
+            >
+              <span class="tile__face"><span class="tile__num">12</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="12"
+              data-hue="0"
+              data-shade="4"
+              aria-label="Tile 13, in place"
+            >
+              <span class="tile__face"><span class="tile__num">13</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="13"
+              data-hue="5"
+              data-shade="5"
+              aria-label="Tile 14, in place"
+            >
+              <span class="tile__face"><span class="tile__num">14</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="14"
+              data-hue="4"
+              data-shade="1"
+              aria-label="Tile 15, in place"
+            >
+              <span class="tile__face"><span class="tile__num">15</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="15"
+              data-hue="3"
+              data-shade="3"
+              aria-label="Tile 16, in place"
+            >
+              <span class="tile__face"><span class="tile__num">16</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="16"
+              data-hue="2"
+              data-shade="5"
+              aria-label="Tile 17, in place"
+            >
+              <span class="tile__face"><span class="tile__num">17</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="17"
+              data-hue="1"
+              data-shade="1"
+              aria-label="Tile 18, in place"
+            >
+              <span class="tile__face"><span class="tile__num">18</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="18"
+              data-hue="0"
+              data-shade="3"
+              aria-label="Tile 19, in place"
+            >
+              <span class="tile__face"><span class="tile__num">19</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="19"
+              data-hue="5"
+              data-shade="4"
+              aria-label="Tile 20, in place"
+            >
+              <span class="tile__face"><span class="tile__num">20</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="20"
+              data-hue="4"
+              data-shade="0"
+              aria-label="Tile 21, in place"
+            >
+              <span class="tile__face"><span class="tile__num">21</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="21"
+              data-hue="3"
+              data-shade="2"
+              aria-label="Tile 22, in place"
+            >
+              <span class="tile__face"><span class="tile__num">22</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="22"
+              data-hue="2"
+              data-shade="4"
+              aria-label="Tile 23, in place"
+            >
+              <span class="tile__face"><span class="tile__num">23</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="23"
+              data-hue="1"
+              data-shade="0"
+              aria-label="Tile 24, in place"
+            >
+              <span class="tile__face"><span class="tile__num">24</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="24"
+              data-hue="0"
+              data-shade="2"
+              aria-label="Tile 25, in place"
+            >
+              <span class="tile__face"><span class="tile__num">25</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="25"
+              data-hue="5"
+              data-shade="3"
+              aria-label="Tile 26, in place"
+            >
+              <span class="tile__face"><span class="tile__num">26</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="26"
+              data-hue="4"
+              data-shade="5"
+              aria-label="Tile 27, in place"
+            >
+              <span class="tile__face"><span class="tile__num">27</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="27"
+              data-hue="3"
+              data-shade="1"
+              aria-label="Tile 28, in place"
+            >
+              <span class="tile__face"><span class="tile__num">28</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="28"
+              data-hue="2"
+              data-shade="3"
+              aria-label="Tile 29, in place"
+            >
+              <span class="tile__face"><span class="tile__num">29</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="29"
+              data-hue="1"
+              data-shade="5"
+              aria-label="Tile 30, in place"
+            >
+              <span class="tile__face"><span class="tile__num">30</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="30"
+              data-hue="0"
+              data-shade="1"
+              aria-label="Tile 31, in place"
+            >
+              <span class="tile__face"><span class="tile__num">31</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="31"
+              data-hue="5"
+              data-shade="2"
+              aria-label="Tile 32, in place"
+            >
+              <span class="tile__face"><span class="tile__num">32</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="32"
+              data-hue="4"
+              data-shade="4"
+              aria-label="Tile 33, in place"
+            >
+              <span class="tile__face"><span class="tile__num">33</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="33"
+              data-hue="3"
+              data-shade="0"
+              aria-label="Tile 34, in place"
+            >
+              <span class="tile__face"><span class="tile__num">34</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="34"
+              data-hue="2"
+              data-shade="2"
+              aria-label="Tile 35, in place"
+            >
+              <span class="tile__face"><span class="tile__num">35</span></span>
+            </button>
+            <button
+              type="button"
+              class="tile"
+              data-id="35"
+              data-hue="1"
+              data-shade="4"
+              aria-label="Tile 36, in place"
+            >
+              <span class="tile__face"><span class="tile__num">36</span></span>
+            </button>
+            <div class="slot-marker" aria-hidden="true"></div>
+          </div>
+          <div class="verbs">
+            <button type="button" class="btn btn--primary btn--scatter">
+              Scatter <kbd class="kbd" data-key="s" aria-hidden="true">S</kbd>
+            </button>
+            <button type="button" class="btn btn--tidy">
+              Tidy <kbd class="kbd" data-key="t" aria-hidden="true">T</kbd>
+            </button>
+            <fieldset class="seg">
+              <legend class="sr-only">Sort by</legend>
+              <input
+                class="sr-only"
+                type="radio"
+                name="sort"
+                id="sort-number"
+                value="number"
+                checked
+              />
+              <label class="seg__label" for="sort-number">Number</label>
+              <input
+                class="sr-only"
+                type="radio"
+                name="sort"
+                id="sort-colour"
+                value="colour"
+              />
+              <label class="seg__label" for="sort-colour">Colour</label>
+            </fieldset>
+          </div>
+          <figcaption class="status">
+            <span id="board-status">All 36 in place.</span>
+            <button type="button" class="status__copy">Copy link</button>
+          </figcaption>
+        </figure>
+      </section>
+      <section class="section" aria-labelledby="rules-title">
+        <div class="section__head">
+          <span class="section__num">01</span>
+          <h2 id="rules-title">Three rules</h2>
+        </div>
+        <div class="rules">
+          <div class="rule">
+            <div class="mini" data-hue="0" data-shade="0" aria-hidden="true">
+              01
+            </div>
+            <h3>Every tile has one home.</h3>
+            <p>
+              Where a tile belongs depends on the sort. Change the sort and the
+              homes move; tiles that are home go with them. Tiles that are loose
+              stay exactly where they are. Moving a mess around is not the same
+              as tidying it.
+            </p>
+          </div>
+          <div class="rule">
+            <div class="mini" data-hue="5" data-shade="1" aria-hidden="true">
+              02
+            </div>
+            <h3>Nothing gets lost.</h3>
+            <p>
+              Scatter as hard as you like. A tile never leaves the board, and
+              Tidy always finds all thirty-six. Afterwards even their stacking
+              order is sorted, which nobody will notice, which is the point.
+            </p>
+          </div>
+          <div class="rule">
+            <div class="mini" data-hue="4" data-shade="3" aria-hidden="true">
+              03
+            </div>
+            <h3>Every mess is repeatable.</h3>
+            <p>
+              Scatter is seeded, not random. Your Mess #4 is everyone's Mess #4,
+              and the address bar always says which one you are looking at. Copy
+              the link and send somebody your mess. They can tidy it for you.
+            </p>
+          </div>
+        </div>
+      </section>
+      <section class="section" aria-labelledby="keys-title">
+        <div class="section__head">
+          <span class="section__num">02</span>
+          <h2 id="keys-title">Keys</h2>
+        </div>
+        <dl class="keys">
+          <div class="keys__row">
+            <dt><kbd class="kbd" data-key="s">S</kbd></dt>
+            <dd>Scatter</dd>
+          </div>
+          <div class="keys__row">
+            <dt><kbd class="kbd" data-key="t">T</kbd></dt>
+            <dd>Tidy</dd>
+          </div>
+          <div class="keys__row">
+            <dt>
+              <kbd class="kbd" data-key="1">1</kbd>
+              <kbd class="kbd" data-key="2">2</kbd>
+            </dt>
+            <dd>Sort by number, or by colour</dd>
+          </div>
+          <div class="keys__row">
+            <dt>
+              <kbd class="kbd" data-key="ArrowLeft">←</kbd>
+              <kbd class="kbd" data-key="ArrowUp">↑</kbd>
+              <kbd class="kbd" data-key="ArrowRight">→</kbd>
+              <kbd class="kbd" data-key="ArrowDown">↓</kbd>
+            </dt>
+            <dd>Move between tiles</dd>
+          </div>
+          <div class="keys__row">
+            <dt><kbd class="kbd" data-key="Space">Space</kbd></dt>
+            <dd>Send a loose tile home, or knock a tidy one loose</dd>
+          </div>
+          <div class="keys__row">
+            <dt><kbd class="kbd" data-key="Escape">Esc</kbd></dt>
+            <dd>Drop a tile back where you picked it up</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="section" aria-labelledby="colophon-title">
+        <div class="section__head">
+          <span class="section__num">03</span>
+          <h2 id="colophon-title">Colophon</h2>
+        </div>
+        <!-- Byte figure: update after the final weigh-in. -->
+        <p class="stat-row">
+          Tile <span data-stat="tile">70</span> px · Gap
+          <span data-stat="gap">8</span> px · Board
+          <span data-stat="side">480</span> px · 36 tiles · 3 files · 0 requests
+          · 56 KB
+        </p>
+        <p>
+          No framework, no build step, no fonts fetched, nothing tracked. Your
+          theme choice is kept in this browser and nowhere else. Nothing on this
+          page moves except the tiles; the page would like that noted. The
+          source is meant to be read, so read it.
+        </p>
+      </section>
+    </main>
+    <footer class="site-footer wrap">
+      <span>Putaway</span>
+      <span>Everything back where it belongs.</span>
+    </footer>
+    <div class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>
