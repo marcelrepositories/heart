@@ -547,7 +547,7 @@ h3 {
   justify-content: space-between;
   column-gap: var(--s1);
   height: 24px;
-  margin-top: var(--s1);
+  margin-top: var(--s2);
 }
 
 .status__count,
