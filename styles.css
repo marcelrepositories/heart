@@ -30,6 +30,10 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-snap: cubic-bezier(0.2, 1.1, 0.3, 1);
   --ease-ui: cubic-bezier(0.2, 0, 0, 1);
+  /* Keep it tidy: knock k comes max(floor, first * ratio^k) after knock k-1 */
+  --knock-first: 2000ms;
+  --knock-floor: 120ms;
+  --knock-ratio: 0.95;
   --s1: 8px;
   --s2: 16px;
   --s3: 24px;
@@ -580,7 +584,8 @@ h3 {
   margin-top: var(--s1);
 }
 
-.status__count {
+.status__count,
+.status__time {
   transition: color var(--dur-flash) var(--ease-ui);
 }
 
@@ -704,9 +709,30 @@ html.js .tile.is-lifted {
   transform: translateY(1px);
 }
 
-.status__count.is-fresh {
+.status__count.is-fresh,
+.status__time.is-fresh {
   color: var(--accent);
   transition: none;
+}
+
+/* Locked for a run */
+.btn:disabled,
+.seg:disabled {
+  color: var(--ink-2);
+  border-color: var(--line);
+  cursor: default;
+}
+
+.btn:disabled .kbd {
+  border-color: var(--line);
+}
+
+.seg:disabled .seg__label {
+  cursor: default;
+}
+
+.seg:disabled input:checked + .seg__label {
+  background: var(--ink-2);
 }
 
 /* Theme cross-fade, scoped to a deliberate toggle and never on *, which would
@@ -829,7 +855,7 @@ html:not(.js) .hint {
 
 /* Hover, fine pointers only */
 @media (hover: hover) {
-  .btn:hover {
+  .btn:not(:disabled):hover {
     border-color: var(--ink);
   }
 
@@ -850,7 +876,10 @@ html:not(.js) .hint {
   html.js .tile {
     cursor: grab;
   }
+}
 
+/* Keycap hints need the room; below 480px the verb row is two lines anyway */
+@media (hover: hover) and (pointer: fine) and (min-width: 480px) {
   .btn .kbd {
     display: inline-flex;
   }
@@ -893,7 +922,7 @@ html:not(.js) .hint {
 
   .keys {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 1fr);
     grid-auto-flow: column;
     column-gap: var(--s4);
   }

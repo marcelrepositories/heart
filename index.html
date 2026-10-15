@@ -501,6 +501,9 @@
             <button type="button" class="btn btn--tidy">
               Tidy <kbd class="kbd" data-key="t" aria-hidden="true">T</kbd>
             </button>
+            <button type="button" class="btn btn--play">
+              Play <kbd class="kbd" data-key="p" aria-hidden="true">P</kbd>
+            </button>
             <fieldset class="seg">
               <legend class="sr-only">Sort by</legend>
               <input
@@ -570,9 +573,27 @@
           </div>
         </div>
       </section>
-      <section class="section" aria-labelledby="keys-title">
+      <section class="section" aria-labelledby="keep-title">
         <div class="section__head">
           <span class="section__num">02</span>
+          <h2 id="keep-title">Keep it tidy</h2>
+        </div>
+        <p class="stat-row">
+          Best in this browser&nbsp;·&nbsp;<span data-best>none yet</span>
+        </p>
+        <p>
+          Press Play and the board starts knocking tiles loose, one at a time,
+          each a little sooner than the last. Send each one home before the next
+          goes: tap it, drag it, or reach it with the arrow keys and press
+          Space. The run ends when nothing is in place, or when you press Tidy,
+          which puts everything away and stops the clock. Runs are numbered like
+          messes, so your Run #7 is everyone's Run #7; the board does not play
+          favourites.
+        </p>
+      </section>
+      <section class="section" aria-labelledby="keys-title">
+        <div class="section__head">
+          <span class="section__num">03</span>
           <h2 id="keys-title">Keys</h2>
         </div>
         <dl class="keys">
@@ -583,6 +604,10 @@
           <div class="keys__row">
             <dt><kbd class="kbd" data-key="t">T</kbd></dt>
             <dd>Tidy</dd>
+          </div>
+          <div class="keys__row">
+            <dt><kbd class="kbd" data-key="p">P</kbd></dt>
+            <dd>Play</dd>
           </div>
           <div class="keys__row">
             <dt>
@@ -612,7 +637,7 @@
       </section>
       <section class="section" aria-labelledby="colophon-title">
         <div class="section__head">
-          <span class="section__num">03</span>
+          <span class="section__num">04</span>
           <h2 id="colophon-title">Colophon</h2>
         </div>
         <!-- Byte figure: update after the final weigh-in. -->
@@ -621,13 +646,13 @@
           Gap&nbsp;<span data-stat="gap">8</span>&nbsp;px&nbsp;·
           Board&nbsp;<span data-stat="side">480</span>&nbsp;px&nbsp;·
           36&nbsp;tiles&nbsp;· 3&nbsp;files&nbsp;· 0&nbsp;requests&nbsp;·
-          63&nbsp;KB
+          72&nbsp;KB
         </p>
         <p>
           No framework, no build step, no fonts fetched, nothing tracked. Your
-          theme choice is kept in this browser and nowhere else. Nothing on this
-          page moves except the tiles; the page would like that noted. The
-          source is meant to be read, so read it.
+          theme choice and your best times are kept in this browser and nowhere
+          else. Nothing on this page moves except the tiles; the page would like
+          that noted. The source is meant to be read, so read it.
         </p>
       </section>
     </main>

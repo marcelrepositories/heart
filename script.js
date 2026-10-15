@@ -15,7 +15,9 @@
   const COUNT = 36;
   const COLS = 6;
   const BORDER = 1;
-  const MESS_MAX = 9999;
+  const SEED_MAX = 9999;
+  const CLOCK_MS = 100;
+  const BEST_KEY = "putaway-best";
   const HOLD_MS = 150;
   const HASH_MS = 150;
   const COPIED_MS = 1200;
@@ -75,12 +77,22 @@
   }
 
   // Nudge draws, in order: angle, distance, rot
-  function nudgeDraw(seed, tilePx) {
-    const rng = mulberry32(seed);
+  function nudgeDraw(rng, tilePx) {
     const angle = rng() * Math.PI * 2;
     const dist = (0.7 + 0.5 * rng()) * tilePx;
     const rot = (rng() * 2 - 1) * 20;
     return { dx: Math.cos(angle) * dist, dy: Math.sin(angle) * dist, rot };
+  }
+
+  // Run order: one Fisher-Yates pass, one draw per swap, i = 35 down to 1
+  // Change this and every run changes
+  function runOrder(rng) {
+    const order = Array.from({ length: COUNT }, (_, i) => i);
+    for (let i = COUNT - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    return order;
   }
 
   // State and tile collection
@@ -95,10 +107,23 @@
     raised: null,
     order: [],
     tick: null,
+    shown: null,
     side: 0,
     tile: 0,
     gap: 0,
     inset: 0,
+  };
+  const run = {
+    phase: "idle", // idle, ready, pretidy, running, ended
+    n: 0, // the last run played, or the one prepared
+    order: [], // the knock cycle, 36 tile ids
+    rng: null, // the run's stream: 35 draws for the order, then 3 per knock
+    gap: null, // { first, floor, ratio }, read from the tokens at each start
+    step: 0, // knocks made so far
+    due: 0, // run time of the next knock, ms
+    at: 0, // run time banked at the last pause, ms
+    since: null, // clock reading at the last resume; null while paused
+    best: 0, // seconds, one decimal; 0 means none yet
   };
   const tiles = [];
   const dom = {};
@@ -108,8 +133,17 @@
   const freeTravel = () => state.side - 2 * BORDER - state.tile;
   const homeSlot = (tile) => slotXY(homeIndex(tile, state.sort), state);
   const allHome = () => tiles.every((t) => t.status === "home");
-  const msOf = (name) =>
+  const allLoose = () => tiles.every((t) => t.status === "loose");
+  const inRun = () => run.phase === "pretidy" || run.phase === "running";
+  const numOf = (name) =>
     parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0;
+  // Monotonic, unlike Date.now()
+  const now = () => window.performance.now();
+  const elapsed = () => run.at + (run.since === null ? 0 : now() - run.since);
+  const tenths = (ms) => Math.floor(ms / 100) / 10;
+  const secs = (t) => `${t.toFixed(1)} s`;
+  const knockGap = (k) =>
+    Math.max(run.gap.floor, run.gap.first * run.gap.ratio ** k);
   // Above every resting tile and the marker, which sits at zTop + 1
   const liftZ = () => state.zTop + 2;
 
@@ -160,30 +194,53 @@
     const shown = tick ? home - tick.ids.size : home;
     const mess = tick ? tick.mess : state.messActive && state.scatterCount;
     const all = shown === COUNT;
-    const was = dom.count.textContent;
-    dom.pre.nodeValue = all ? "All " : mess ? `Mess #${mess} · ` : "";
-    dom.count.textContent = shown;
-    dom.post.nodeValue = all ? " in place." : ` of ${COUNT} in place.`;
-    if (was && Number(was) !== shown) flash(all);
+    const line = statusLine(shown, mess, all);
+    dom.line.forEach((node, i) => (node.textContent = line[i]));
+    if (state.shown !== null && state.shown !== shown) flash(all);
+    state.shown = shown;
     document.title = all ? "Putaway" : `Putaway · ${COUNT - shown} loose`;
     const icon = all ? ICON_TIDY : ICON_LOOSE;
     if (dom.icon.getAttribute("href") !== icon)
       dom.icon.setAttribute("href", icon);
-    dom.scatter.classList.toggle("btn--primary", all);
-    dom.tidy.classList.toggle("btn--primary", !all);
+    // Exactly one primary; Tidy means "end the run" while one is on
+    const ready = run.phase === "ready";
+    dom.scatter.classList.toggle("btn--primary", all && !ready && !inRun());
+    dom.tidy.classList.toggle("btn--primary", !all || inRun());
+    dom.play.classList.toggle("btn--primary", all && ready);
     syncFocus();
   }
 
-  // Restarts the counter's accent-to-ink fade; at 36 the board flashes too
+  // The five status slots: pre, time, mid, count, post
+  function statusLine(shown, mess, all) {
+    const time = secs(tenths(inRun() ? elapsed() : run.at));
+    if (inRun()) return [`Run #${run.n} · `, time, " · ", shown, " home."];
+    if (run.phase === "ended") {
+      const best = tenths(run.at) >= run.best ? "so far" : secs(run.best);
+      return ["Over at ", time, ` · Best ${best}.`, "", ""];
+    }
+    const rest = ` of ${COUNT} in place.`;
+    if (mess) return [`Mess #${mess} · `, "", "", shown, rest];
+    if (all && run.phase === "ready")
+      return [`Run #${run.n} is ready.`, "", "", "", ""];
+    if (all) return ["All ", "", "", shown, " in place."];
+    return ["", "", "", shown, rest];
+  }
+
+  // Restarts an accent-to-ink fade
+  function freshen(el) {
+    el.classList.add("is-fresh");
+    void el.offsetWidth;
+    el.classList.remove("is-fresh");
+  }
+
+  // The counter fades on every change; at 36 the board flashes too
   function flash(all) {
-    dom.count.classList.add("is-fresh");
-    void dom.count.offsetWidth;
-    dom.count.classList.remove("is-fresh");
+    freshen(dom.count);
     if (!all) return;
     clearTimeout(timers.flash);
     dom.board.classList.add("is-complete");
     const off = () => dom.board.classList.remove("is-complete");
-    timers.flash = setTimeout(off, msOf("--dur-flash"));
+    timers.flash = setTimeout(off, numOf("--dur-flash"));
   }
 
   function renderStats() {
@@ -194,6 +251,10 @@
 
   function renderSort() {
     dom.sorts[state.sort].checked = true;
+  }
+
+  function renderBest() {
+    dom.best.textContent = run.best ? secs(run.best) : "none yet";
   }
 
   function announce(text) {
@@ -250,6 +311,8 @@
     const max = freeTravel();
     Object.assign(tile, { status: "loose", fx, fy, rot, z: m.z });
     applyTarget(tile, { x: fx * max, y: fy * max, rot, ...m });
+    // The run ends the moment the last tile is loose, by any route
+    if (run.phase === "running" && allLoose()) endRun();
   }
 
   function snapHome(tile) {
@@ -275,7 +338,8 @@
 
   function scatter() {
     if (state.drag) endDrag("cancel");
-    state.scatterCount = (state.scatterCount % MESS_MAX) + 1;
+    if (run.phase === "ended") run.phase = "idle";
+    state.scatterCount = (state.scatterCount % SEED_MAX) + 1;
     state.messActive = true;
     placeScatter(motion("scatter", "out"));
     announce(`Mess ${state.scatterCount}. None in place.`);
@@ -284,6 +348,8 @@
   }
 
   function tidy() {
+    const ending = run.phase === "running";
+    if (ending) endRun();
     if (state.drag) endDrag("cancel");
     const moving = tiles.filter((t) => t.status !== "home").map((t) => t.id);
     if (!moving.length) return;
@@ -299,12 +365,13 @@
       armTick();
     }
     renderStatus();
-    if (!state.tick) announce("All 36 in place.");
+    // A motionless tidy that ended a run keeps the result audible
+    if (!state.tick && !ending) announce("All 36 in place.");
   }
 
   // The fallback forces the final count once the last glide can have landed
   function armTick() {
-    const ms = msOf("--dur-tidy") + (COUNT - 1) * msOf("--stagger") + 50;
+    const ms = numOf("--dur-tidy") + (COUNT - 1) * numOf("--stagger") + 50;
     clearTimeout(state.tick.timer);
     state.tick.timer = setTimeout(finishTick, ms);
   }
@@ -314,6 +381,7 @@
     cancelTick();
     renderStatus();
     if (allHome()) announce("All 36 in place.");
+    if (run.phase === "pretidy") startRun();
   }
 
   function cancelTick() {
@@ -346,15 +414,19 @@
   }
 
   // A throw that would leave the board is mirrored, so it keeps its distance
-  function nudge(tile) {
-    state.nudgeCount += 1;
-    const d = nudgeDraw(state.nudgeCount * 37 + tile.id, state.tile);
+  function fling(tile, d) {
     const slot = homeSlot(tile);
     const max = freeTravel();
     const x = bounce(slot.x, d.dx, max);
     const y = bounce(slot.y, d.dy, max);
     const m = { ...motion("nudge", "out"), z: ++state.zTop };
     setLoose(tile, x / max, y / max, d.rot, m);
+  }
+
+  function nudge(tile) {
+    state.nudgeCount += 1;
+    const rng = mulberry32(state.nudgeCount * 37 + tile.id);
+    fling(tile, nudgeDraw(rng, state.tile));
   }
 
   function tap(tile) {
@@ -376,6 +448,125 @@
     buildOrder();
     syncFocus();
     announce(`Sorted by ${sort}.`);
+    writeHash();
+  }
+
+  // Keep it tidy
+  function readBest() {
+    try {
+      const n = Number(localStorage.getItem(BEST_KEY));
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  function writeBest(t) {
+    try {
+      localStorage.setItem(BEST_KEY, t.toFixed(1));
+    } catch {
+      // Storage is optional; the best lasts for this page
+    }
+  }
+
+  // Scatter, Play and the sort lock for the run; a focused one hands focus
+  // to the board first, before the browser can drop it to body
+  function lockControls(lock) {
+    const locks = [dom.scatter, dom.play, dom.seg];
+    const held = locks.some((el) => el.contains(document.activeElement));
+    locks.forEach((el) => (el.disabled = lock));
+    if (lock && held) state.tabbable.el.focus();
+  }
+
+  function play() {
+    if (inRun()) return;
+    if (run.phase !== "ready") run.n = (run.n % SEED_MAX) + 1;
+    Object.assign(run, {
+      phase: "pretidy",
+      step: 0,
+      due: 0,
+      at: 0,
+      since: null,
+    });
+    lockControls(true);
+    tidy(); // a no-op on a tidy board; otherwise the count ticks in the run line
+    if (state.tick) renderStatus();
+    else startRun();
+    writeHash();
+  }
+
+  function startRun() {
+    run.phase = "running";
+    // Run seeds sit above the mess range, so Run #n and Mess #n share nothing
+    run.rng = mulberry32(SEED_MAX + run.n);
+    run.order = runOrder(run.rng);
+    run.gap = {
+      first: numOf("--knock-first"),
+      floor: numOf("--knock-floor"),
+      ratio: numOf("--knock-ratio"),
+    };
+    run.due = knockGap(0);
+    announce(`Run ${run.n}. Keep it tidy.`);
+    renderStatus();
+    if (!document.hidden) resumeRun();
+  }
+
+  // The clock runs only while the page is visible: a hidden tab throttles
+  // timers, so the run waits rather than piling up knocks
+  function resumeRun() {
+    if (run.since !== null) return;
+    run.since = now();
+    timers.knock = setTimeout(knock, Math.max(0, run.due - run.at));
+    tickClock();
+  }
+
+  function pauseRun() {
+    if (run.since === null) return;
+    run.at = elapsed();
+    run.since = null;
+    clearTimeout(timers.knock);
+    clearTimeout(timers.clock);
+  }
+
+  function onVisibility() {
+    if (run.phase !== "running") return;
+    if (document.hidden) pauseRun();
+    else resumeRun();
+  }
+
+  function tickClock() {
+    dom.time.textContent = secs(tenths(elapsed()));
+    timers.clock = setTimeout(tickClock, CLOCK_MS);
+  }
+
+  // Step k knocks order[k % 36]; a loose tile is knocked again, the held tile
+  // is spared; the draws are taken either way so the stream stays in step
+  function knock() {
+    const tile = tiles[run.order[run.step % COUNT]];
+    const d = nudgeDraw(run.rng, state.tile);
+    if (!(state.drag && state.drag.tile === tile)) fling(tile, d);
+    run.step += 1;
+    run.due += knockGap(run.step);
+    if (run.phase !== "running") return; // the fling may have ended the run
+    timers.knock = setTimeout(knock, Math.max(0, run.due - elapsed()));
+    renderStatus();
+  }
+
+  function endRun() {
+    pauseRun();
+    run.phase = "ended";
+    const t = tenths(run.at);
+    const best = t >= run.best;
+    if (best) {
+      run.best = t;
+      writeBest(t);
+      renderBest();
+    }
+    lockControls(false);
+    const tail = best ? " Best so far." : "";
+    announce(`Run ${run.n} over at ${t.toFixed(1)} seconds.${tail}`);
+    renderStatus();
+    freshen(dom.time);
     writeHash();
   }
 
@@ -508,8 +699,10 @@
     } else if (el && (key === "Space" || key === "Enter"))
       tap(tiles[el.dataset.id]);
     else if (e.repeat) return;
-    else if (key === "s") scatter();
     else if (key === "t") tidy();
+    else if (inRun()) return;
+    else if (key === "s") scatter();
+    else if (key === "p") play();
     else if (key === "1") setSort("number");
     else if (key === "2") setSort("colour");
     else return;
@@ -542,10 +735,16 @@
     const params = new URLSearchParams(location.hash.slice(1));
     const mess = params.get("mess");
     const n = /^\d+$/.test(mess) ? Number(mess) : 0;
+    const prepared = params.get("play");
+    const p = /^\d+$/.test(prepared) ? Number(prepared) : 0;
     if (params.get("sort") === "colour") state.sort = "colour";
-    if (n >= 1 && n <= MESS_MAX) {
+    if (n >= 1 && n <= SEED_MAX) {
       state.scatterCount = n;
       state.messActive = true;
+    }
+    if (p >= 1 && p <= SEED_MAX) {
+      run.n = p;
+      run.phase = "ready";
     }
   }
 
@@ -558,6 +757,7 @@
     clearTimeout(timers.hash);
     const parts = [];
     if (state.messActive) parts.push(`mess=${state.scatterCount}`);
+    if (run.phase !== "idle") parts.push(`play=${run.n}`);
     if (state.sort === "colour") parts.push("sort=colour");
     const hash = parts.length ? `#${parts.join("&")}` : "";
     if (hash === location.hash) return;
@@ -613,7 +813,7 @@
     renderTheme();
     clearTimeout(timers.theme);
     const off = () => root.classList.remove("theming");
-    timers.theme = setTimeout(off, msOf("--dur-theme"));
+    timers.theme = setTimeout(off, numOf("--dur-theme"));
   }
 
   // Init
@@ -625,6 +825,9 @@
     dom.live = $("[aria-live]");
     dom.scatter = $(".btn--scatter");
     dom.tidy = $(".btn--tidy");
+    dom.play = $(".btn--play");
+    dom.seg = $(".seg");
+    dom.best = $("[data-best]");
     dom.theme = $(".btn--theme");
     dom.copy = $(".status__copy");
     dom.icon = $("link[rel='icon']");
@@ -639,11 +842,13 @@
       const list = dom.kbds.get(el.dataset.key) || [];
       dom.kbds.set(el.dataset.key, list.concat(el));
     });
-    dom.pre = document.createTextNode("");
+    dom.time = document.createElement("span");
+    dom.time.className = "status__time";
     dom.count = document.createElement("span");
     dom.count.className = "status__count";
-    dom.post = document.createTextNode("");
-    $("#board-status").replaceChildren(dom.pre, dom.count, dom.post);
+    const text = () => document.createTextNode("");
+    dom.line = [text(), dom.time, text(), dom.count, text()];
+    $("#board-status").replaceChildren(...dom.line);
     document.querySelectorAll(".tile").forEach((el) => {
       const { id, hue, shade } = el.dataset;
       tiles.push({
@@ -656,6 +861,8 @@
     });
     state.tabbable = tiles[0];
     state.tabbable.el.tabIndex = 0;
+    run.best = readBest();
+    renderBest();
     readHash();
     buildOrder();
     layout();
@@ -663,7 +870,7 @@
     else
       state.order.forEach((tile, i) => setHome(tile, { ...STILL, z: i + 1 }));
     // A seeded page may already be painted: its hand-off is drawn, not faded
-    const verbs = [dom.scatter, dom.tidy];
+    const verbs = [dom.scatter, dom.tidy, dom.play];
     verbs.forEach((b) => (b.style.transition = "none"));
     renderStatus();
     void dom.tidy.offsetWidth;
@@ -686,11 +893,13 @@
     dom.board.addEventListener("focusout", syncFocus);
     dom.scatter.addEventListener("click", scatter);
     dom.tidy.addEventListener("click", tidy);
+    dom.play.addEventListener("click", play);
     dom.copy.addEventListener("click", copyLink);
     dom.theme.addEventListener("click", toggleTheme);
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", (e) => pressKeycap(keyName(e), false));
     window.addEventListener("blur", onBlur);
+    document.addEventListener("visibilitychange", onVisibility);
     // The permalink wins over #top, #board and a hand-edited hash
     window.addEventListener("hashchange", writeHash);
     writeHash();
