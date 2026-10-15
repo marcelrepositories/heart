@@ -6,4 +6,4 @@ A single page about tidying. Thirty-six tiles sit on a board, one home each. Dra
 
 Three files, no build step: open `index.html`.
 
-The GitHub Actions workflow deploys the repository root to GitHub Pages on every push to `main`.
+GitHub Pages serves the repository root from the default branch; `.nojekyll` keeps every file as it is.
