@@ -15,9 +15,11 @@
   const COUNT = 36;
   const COLS = 6;
   const BORDER = 1;
-  const Z_LIFT = 60;
+  const MESS_MAX = 9999;
   const HOLD_MS = 150;
   const HASH_MS = 150;
+  const COPIED_MS = 1200;
+  const FAILED_MS = 2000;
   const STEP = {
     ArrowLeft: -1,
     ArrowRight: 1,
@@ -31,6 +33,7 @@
   const STILL = { dur: "0ms", ease: "linear", step: 0 };
   const EDITABLE = "input:not([type='radio']), textarea, [contenteditable]";
 
+  // Seeded RNG, exact
   function mulberry32(seed) {
     let a = seed >>> 0;
     return () => {
@@ -52,13 +55,16 @@
     y: g.inset + Math.floor(index / COLS) * (g.tile + g.gap),
   });
   const snapRadius = (tilePx) => Math.max(24, 0.45 * tilePx);
+  const bounce = (from, by, hi) =>
+    from + by < 0 || from + by > hi ? from - by : from + by;
   const motion = (dur, ease, step = 0) => ({
     dur: `var(--dur-${dur})`,
     ease: `var(--ease-${ease})`,
     step,
   });
 
-  // Scatter draws per tile, in id order: fx, fy, rot. Change this and every mess changes
+  // Scatter draws per tile, in id order: fx, fy, rot
+  // Change this order and every mess changes
   function scatterDraw(seed) {
     const rng = mulberry32(seed);
     return Array.from({ length: COUNT }, () => {
@@ -86,6 +92,9 @@
     messActive: false,
     drag: null,
     tabbable: null,
+    raised: null,
+    order: [],
+    tick: null,
     side: 0,
     tile: 0,
     gap: 0,
@@ -96,13 +105,13 @@
   const timers = {};
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const darkScheme = matchMedia("(prefers-color-scheme: dark)");
-  const free = () => state.side - state.tile;
+  const freeTravel = () => state.side - 2 * BORDER - state.tile;
   const homeSlot = (tile) => slotXY(homeIndex(tile, state.sort), state);
+  const allHome = () => tiles.every((t) => t.status === "home");
   const msOf = (name) =>
     parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0;
-  let order = [];
-  let tick = null;
-  let lastCount = -1;
+  // Above every resting tile and the marker, which sits at zTop + 1
+  const liftZ = () => state.zTop + 2;
 
   // Layout
   function layout() {
@@ -121,12 +130,14 @@
   }
 
   function placeAll() {
+    if (state.drag) endDrag("cancel");
     tiles.forEach((tile) => {
       const m = { ...STILL, z: tile.z };
       if (tile.status === "home") setHome(tile, m);
       else setLoose(tile, tile.fx, tile.fy, tile.rot, m);
     });
-    syncMarker();
+    if (state.tick) finishTick();
+    syncFocus();
   }
 
   // Render
@@ -144,29 +155,26 @@
   }
 
   function renderStatus() {
+    const { tick } = state;
     const home = tiles.filter((t) => t.status === "home").length;
-    if (home === COUNT && state.messActive) {
-      state.messActive = false;
-      writeHash();
-    }
-    const shown = tick ? COUNT - tick.ids.size : home;
+    const shown = tick ? home - tick.ids.size : home;
     const mess = tick ? tick.mess : state.messActive && state.scatterCount;
     const all = shown === COUNT;
+    const was = dom.count.textContent;
     dom.pre.nodeValue = all ? "All " : mess ? `Mess #${mess} · ` : "";
     dom.count.textContent = shown;
     dom.post.nodeValue = all ? " in place." : ` of ${COUNT} in place.`;
-    if (shown !== lastCount && lastCount >= 0) flash(all);
-    lastCount = shown;
+    if (was && Number(was) !== shown) flash(all);
     document.title = all ? "Putaway" : `Putaway · ${COUNT - shown} loose`;
     const icon = all ? ICON_TIDY : ICON_LOOSE;
     if (dom.icon.getAttribute("href") !== icon)
       dom.icon.setAttribute("href", icon);
     dom.scatter.classList.toggle("btn--primary", all);
     dom.tidy.classList.toggle("btn--primary", !all);
-    syncMarker();
+    syncFocus();
   }
 
-  // Restart the counter's accent-to-ink fade; at 36 the board border flashes too
+  // Restarts the counter's accent-to-ink fade; at 36 the board flashes too
   function flash(all) {
     dom.count.classList.add("is-fresh");
     void dom.count.offsetWidth;
@@ -184,28 +192,44 @@
     });
   }
 
+  function renderSort() {
+    dom.sorts[state.sort].checked = true;
+  }
+
   function announce(text) {
     dom.live.textContent = text;
   }
 
-  function setLifted(tile, on) {
-    tile.el.classList.toggle("is-lifted", on);
-    tile.el.style.zIndex = on ? Z_LIFT : tile.z;
+  function vibrate(ms) {
+    if (navigator.vibrate) navigator.vibrate(ms);
   }
 
   function showMarker(tile, opacity) {
     const slot = homeSlot(tile);
     dom.marker.style.setProperty("--x", `${slot.x}px`);
     dom.marker.style.setProperty("--y", `${slot.y}px`);
+    dom.marker.style.zIndex = state.zTop + 1;
     dom.marker.style.opacity = opacity;
   }
 
-  function syncMarker() {
+  // A loose tile with keyboard focus rises above the rest, so its ring is
+  // never covered, and shows the marker at its home
+  function syncFocus() {
     if (state.drag) return;
     const el = document.activeElement;
-    const tile = el.matches(".tile:focus-visible") && tiles[el.dataset.id];
-    if (tile && tile.status === "loose") showMarker(tile, 0.4);
-    else dom.marker.style.opacity = 0;
+    const tile = el.matches(".tile:focus-visible")
+      ? tiles[el.dataset.id]
+      : null;
+    const raised = tile && tile.status === "loose" ? tile : null;
+    if (state.raised && state.raised !== raised)
+      state.raised.el.style.zIndex = state.raised.z;
+    state.raised = raised;
+    if (!raised) {
+      dom.marker.style.opacity = 0;
+      return;
+    }
+    raised.el.style.zIndex = state.zTop + 1;
+    showMarker(raised, 0.4);
   }
 
   // Actions
@@ -213,15 +237,34 @@
     const slot = homeSlot(tile);
     Object.assign(tile, { status: "home", rot: 0, z: m.z });
     applyTarget(tile, { x: slot.x, y: slot.y, rot: 0, ...m });
+    // The mess ends the moment the last tile is home, by any route
+    if (state.messActive && allHome()) {
+      state.messActive = false;
+      writeHash();
+    }
   }
 
+  // A tile knocked loose mid-Tidy leaves the tick; the rest keep counting
   function setLoose(tile, fx, fy, rot, m) {
-    cancelTick();
+    if (state.tick) state.tick.ids.delete(tile.id);
+    const max = freeTravel();
     Object.assign(tile, { status: "loose", fx, fy, rot, z: m.z });
-    applyTarget(tile, { x: fx * free(), y: fy * free(), rot, ...m });
+    applyTarget(tile, { x: fx * max, y: fy * max, rot, ...m });
+  }
+
+  function snapHome(tile) {
+    setHome(tile, { ...motion("snap", "snap"), z: ++state.zTop });
+    vibrate(8);
+  }
+
+  // Tidy timing, staggered by home index, which also sorts the stacking order
+  function glideHome(tile) {
+    const idx = homeIndex(tile, state.sort);
+    setHome(tile, { ...motion("tidy", "snap", idx), z: idx + 1 });
   }
 
   function placeScatter(m) {
+    cancelTick();
     const draws = scatterDraw(state.scatterCount);
     tiles.forEach((tile, i) => {
       const d = draws[i];
@@ -231,7 +274,8 @@
   }
 
   function scatter() {
-    state.scatterCount += 1;
+    if (state.drag) endDrag("cancel");
+    state.scatterCount = (state.scatterCount % MESS_MAX) + 1;
     state.messActive = true;
     placeScatter(motion("scatter", "out"));
     announce(`Mess ${state.scatterCount}. None in place.`);
@@ -240,128 +284,160 @@
   }
 
   function tidy() {
-    cancelTick();
+    if (state.drag) endDrag("cancel");
     const moving = tiles.filter((t) => t.status !== "home").map((t) => t.id);
-    const mess = state.messActive && state.scatterCount;
-    tiles.forEach((tile) => {
-      const idx = homeIndex(tile, state.sort);
-      setHome(tile, { ...motion("tidy", "snap", idx), z: idx + 1 });
-    });
+    if (!moving.length) return;
+    // A tick still running keeps its mess label and its tiles in flight
+    const { tick } = state;
+    const mess = tick ? tick.mess : state.messActive && state.scatterCount;
+    const ids = new Set(tick ? [...tick.ids, ...moving] : moving);
+    cancelTick();
+    tiles.forEach(glideHome);
     state.zTop = COUNT;
-    if (moving.length && !reduced.matches) {
-      const ms = msOf("--dur-tidy") + (COUNT - 1) * msOf("--stagger") + 50;
-      tick = { ids: new Set(moving), mess, timer: setTimeout(finishTick, ms) };
+    if (!reduced.matches) {
+      state.tick = { ids, mess };
+      armTick();
     }
     renderStatus();
-    if (moving.length && !tick) announce("All 36 in place.");
+    if (!state.tick) announce("All 36 in place.");
   }
 
+  // The fallback forces the final count once the last glide can have landed
+  function armTick() {
+    const ms = msOf("--dur-tidy") + (COUNT - 1) * msOf("--stagger") + 50;
+    clearTimeout(state.tick.timer);
+    state.tick.timer = setTimeout(finishTick, ms);
+  }
+
+  // Announces only when every tile is home; one knocked loose mid-Tidy is not
   function finishTick() {
     cancelTick();
     renderStatus();
-    announce("All 36 in place.");
+    if (allHome()) announce("All 36 in place.");
   }
 
   function cancelTick() {
-    if (!tick) return;
-    clearTimeout(tick.timer);
-    tick = null;
+    if (!state.tick) return;
+    clearTimeout(state.tick.timer);
+    state.tick = null;
+  }
+
+  // A tile has landed only if it is drawn at its slot: a shorter move that
+  // ended in the frame Tidy started also reports its transform here
+  function hasLanded(tile) {
+    const slot = homeSlot(tile);
+    const board = dom.board.getBoundingClientRect();
+    const at = tile.el.getBoundingClientRect();
+    return (
+      Math.abs(at.left - board.left - BORDER - slot.x) < 1 &&
+      Math.abs(at.top - board.top - BORDER - slot.y) < 1
+    );
   }
 
   function onTransitionEnd(e) {
+    const { tick } = state;
     const isTile = e.target.classList.contains("tile");
     if (!tick || !isTile || e.propertyName !== "transform") return;
-    tick.ids.delete(Number(e.target.dataset.id));
+    const tile = tiles[e.target.dataset.id];
+    if (!tick.ids.has(tile.id) || !hasLanded(tile)) return;
+    tick.ids.delete(tile.id);
     if (tick.ids.size) renderStatus();
     else finishTick();
   }
 
+  // A throw that would leave the board is mirrored, so it keeps its distance
   function nudge(tile) {
     state.nudgeCount += 1;
     const d = nudgeDraw(state.nudgeCount * 37 + tile.id, state.tile);
     const slot = homeSlot(tile);
-    const max = free();
-    const fx = clamp(slot.x + d.dx, 0, max) / max;
-    const fy = clamp(slot.y + d.dy, 0, max) / max;
+    const max = freeTravel();
+    const x = bounce(slot.x, d.dx, max);
+    const y = bounce(slot.y, d.dy, max);
     const m = { ...motion("nudge", "out"), z: ++state.zTop };
-    setLoose(tile, fx, fy, d.rot, m);
+    setLoose(tile, x / max, y / max, d.rot, m);
   }
 
   function tap(tile) {
-    if (tile.status === "loose") {
-      setHome(tile, { ...motion("snap", "snap"), z: ++state.zTop });
-      vibrate(8);
-    } else nudge(tile);
+    if (tile.status === "loose") snapHome(tile);
+    else nudge(tile);
     renderStatus();
   }
 
   function setSort(sort) {
     if (sort === state.sort) return;
+    if (state.drag) endDrag("cancel");
     state.sort = sort;
-    dom.sorts[sort].checked = true;
+    renderSort();
     tiles.forEach((tile) => {
-      const idx = homeIndex(tile, sort);
-      if (tile.status === "home")
-        setHome(tile, { ...motion("tidy", "snap", idx), z: idx + 1 });
+      if (tile.status === "home") glideHome(tile);
     });
+    // Tiles mid-Tidy glide again in full, so the fallback starts over
+    if (state.tick) armTick();
     buildOrder();
-    syncMarker();
+    syncFocus();
     announce(`Sorted by ${sort}.`);
     writeHash();
   }
-
-  const vibrate = (ms) => navigator.vibrate && navigator.vibrate(ms);
 
   // Drag recogniser
   function onPointerDown(e) {
     const el = e.target.closest(".tile");
     if (!el || e.button !== 0 || state.drag) return;
     const tile = tiles[el.dataset.id];
-    const at =
-      tile.status === "home"
-        ? homeSlot(tile)
-        : { x: tile.fx * free(), y: tile.fy * free() };
-    const touch = e.pointerType === "touch";
     state.drag = {
       tile,
       id: e.pointerId,
-      touch,
-      start: [e.clientX, e.clientY],
-      base: at,
-      raw: at,
+      start: { x: e.clientX, y: e.clientY },
       origin: { ...tile },
     };
-    if (touch) state.drag.timer = setTimeout(lift, HOLD_MS);
+    if (e.pointerType === "touch")
+      state.drag.timer = setTimeout(() => lift(true), HOLD_MS);
     else lift();
   }
 
-  function lift() {
+  // The held tile is drawn straight, at once and above everything
+  const drawHeld = (tile, x, y) =>
+    applyTarget(tile, { x, y, rot: 0, ...STILL, z: liftZ() });
+
+  // Lifts the tile where it is drawn; one grabbed mid-Tidy leaves the tidy
+  function lift(held) {
     const d = state.drag;
     if (!d || d.lifted) return;
     d.lifted = true;
+    const board = dom.board.getBoundingClientRect();
+    const at = d.tile.el.getBoundingClientRect();
+    const max = freeTravel();
+    const x = at.left - board.left - BORDER;
+    const y = at.top - board.top - BORDER;
+    d.offset = { x: d.start.x - at.left, y: d.start.y - at.top };
+    if (state.tick && state.tick.ids.has(d.tile.id))
+      setLoose(d.tile, x / max, y / max, 0, { ...STILL, z: d.tile.z });
+    drawHeld(d.tile, x, y);
     d.tile.el.setPointerCapture(d.id);
-    setLifted(d.tile, true);
-    if (d.touch) vibrate(5);
+    d.tile.el.classList.add("is-lifted");
+    if (held) vibrate(5);
   }
 
   function onPointerMove(e) {
     const d = state.drag;
     if (!d || e.pointerId !== d.id) return;
-    const dx = e.clientX - d.start[0];
-    const dy = e.clientY - d.start[1];
+    const dx = e.clientX - d.start.x;
+    const dy = e.clientY - d.start.y;
     const travel = Math.max(Math.abs(dx), Math.abs(dy));
     if (!d.lifted) {
-      // Sideways the page cannot pan, so lift; a vertical move is the page's until it says otherwise
+      // Sideways the page cannot pan, so lift; a vertical move is the page's
       if (Math.abs(dx) <= 8 || Math.abs(dx) <= Math.abs(dy)) return;
       clearTimeout(d.timer);
       lift();
     }
     if (travel > 4) d.moved = true;
     if (!d.moved) return;
-    const max = free();
+    // Board coordinates: the tile stays under the pointer if the page scrolls
+    const board = dom.board.getBoundingClientRect();
+    const max = freeTravel();
     d.raw = {
-      x: clamp(d.base.x + dx, 0, max),
-      y: clamp(d.base.y + dy, 0, max),
+      x: clamp(e.clientX - board.left - BORDER - d.offset.x, 0, max),
+      y: clamp(e.clientY - board.top - BORDER - d.offset.y, 0, max),
     };
     const slot = homeSlot(d.tile);
     d.near =
@@ -369,7 +445,7 @@
     const lean = d.near ? 0.2 : 0;
     const x = d.raw.x + (slot.x - d.raw.x) * lean;
     const y = d.raw.y + (slot.y - d.raw.y) * lean;
-    applyTarget(d.tile, { x, y, rot: 0, ...STILL, z: Z_LIFT });
+    drawHeld(d.tile, x, y);
     showMarker(d.tile, d.near ? 1 : 0.4);
   }
 
@@ -379,33 +455,27 @@
     endDrag(d.lifted || e.type === "pointerup" ? "drop" : "abandon");
   }
 
-  // Ends the drag: drop (a tap, a snap home or a loose drop), cancel (Escape, back to the origin) or abandon (the page took the gesture)
+  // Ends the drag: drop (a tap, a snap home or a loose drop), cancel (Escape,
+  // back to the origin) or abandon (the page took the gesture)
   function endDrag(how) {
     const d = state.drag;
+    const { el } = d.tile;
     clearTimeout(d.timer);
     state.drag = null;
     if (d.lifted) {
-      try {
-        d.tile.el.releasePointerCapture(d.id);
-      } catch {
-        // The pointer may already be gone
-      }
-      setLifted(d.tile, false);
+      if (el.hasPointerCapture(d.id)) el.releasePointerCapture(d.id);
+      el.classList.remove("is-lifted");
     }
-    const max = free();
-    const z = ++state.zTop;
     if (how === "cancel") {
       const m = { ...motion("snap", "snap"), z: d.tile.z };
       if (d.origin.status === "home") setHome(d.tile, m);
       else setLoose(d.tile, d.origin.fx, d.origin.fy, 0, m);
     } else if (how === "abandon") return;
     else if (!d.moved) return tap(d.tile);
-    else if (!d.lifted) return;
-    else if (d.near) {
-      setHome(d.tile, { ...motion("snap", "snap"), z });
-      vibrate(8);
-    } else {
-      const m = { ...motion("lift", "ui"), z };
+    else if (d.near) snapHome(d.tile);
+    else {
+      const max = freeTravel();
+      const m = { ...motion("lift", "ui"), z: ++state.zTop };
       setLoose(d.tile, d.raw.x / max, d.raw.y / max, 0, m);
     }
     renderStatus();
@@ -432,9 +502,9 @@
     if (e.target.matches(EDITABLE)) return;
     const el = e.target.closest(".tile");
     if (el && (key in STEP || key === "Home" || key === "End")) {
-      const i = order.indexOf(tiles[el.dataset.id]);
+      const i = state.order.indexOf(tiles[el.dataset.id]);
       const to = key === "Home" ? 0 : key === "End" ? COUNT - 1 : i + STEP[key];
-      focusTile(order[clamp(to, 0, COUNT - 1)]);
+      state.order[clamp(to, 0, COUNT - 1)].el.focus();
     } else if (el && (key === "Space" || key === "Enter"))
       tap(tiles[el.dataset.id]);
     else if (e.repeat) return;
@@ -447,33 +517,33 @@
   }
 
   function onBlur() {
-    dom.kbds.forEach((list) =>
-      list.forEach((el) => el.classList.remove("is-down")),
-    );
+    dom.kbds.forEach((_, key) => pressKeycap(key, false));
     if (state.drag) endDrag(state.drag.lifted ? "drop" : "abandon");
   }
 
   function buildOrder() {
     const key = (tile) => homeIndex(tile, state.sort);
-    order = [...tiles].sort((a, b) => key(a) - key(b));
+    state.order = [...tiles].sort((a, b) => key(a) - key(b));
   }
 
-  function focusTile(tile) {
-    state.tabbable.el.tabIndex = -1;
-    tile.el.tabIndex = 0;
-    state.tabbable = tile;
-    tile.el.focus({ preventScroll: true });
+  // The roving tabindex follows focus however it arrived, by key or pointer
+  function onFocusIn(e) {
+    const el = e.target.closest(".tile");
+    if (el && el !== state.tabbable.el) {
+      state.tabbable.el.tabIndex = -1;
+      el.tabIndex = 0;
+      state.tabbable = tiles[el.dataset.id];
+    }
+    syncFocus();
   }
 
   // URL: replaceState, so a mess never piles up in the history
   function readHash() {
     const params = new URLSearchParams(location.hash.slice(1));
-    const n = parseInt(params.get("mess"), 10);
-    if (params.get("sort") === "colour") {
-      state.sort = "colour";
-      dom.sorts.colour.checked = true;
-    }
-    if (n >= 1 && n <= 9999) {
+    const mess = params.get("mess");
+    const n = /^\d+$/.test(mess) ? Number(mess) : 0;
+    if (params.get("sort") === "colour") state.sort = "colour";
+    if (n >= 1 && n <= MESS_MAX) {
       state.scatterCount = n;
       state.messActive = true;
     }
@@ -506,7 +576,7 @@
     clearTimeout(timers.label);
     dom.copy.textContent = ok ? "Copied" : "Use the address bar";
     const reset = () => (dom.copy.textContent = "Copy link");
-    timers.label = setTimeout(reset, ok ? 1200 : 2000);
+    timers.label = setTimeout(reset, ok ? COPIED_MS : FAILED_MS);
     if (ok) announce("Link copied.");
   }
 
@@ -516,12 +586,7 @@
     area.value = location.href;
     document.body.append(area);
     area.select();
-    let ok = false;
-    try {
-      ok = document.execCommand("copy");
-    } catch {
-      // Nothing copied; the label says to use the address bar
-    }
+    const ok = document.execCommand("copy");
     area.remove();
     dom.copy.focus();
     return ok;
@@ -546,9 +611,12 @@
       // Storage is optional; the choice lasts for this page
     }
     renderTheme();
-    setTimeout(() => root.classList.remove("theming"), msOf("--dur-theme"));
+    clearTimeout(timers.theme);
+    const off = () => root.classList.remove("theming");
+    timers.theme = setTimeout(off, msOf("--dur-theme"));
   }
 
+  // Init
   function init() {
     const $ = (s) => document.querySelector(s);
     dom.figure = $(".figure");
@@ -559,7 +627,6 @@
     dom.tidy = $(".btn--tidy");
     dom.theme = $(".btn--theme");
     dom.copy = $(".status__copy");
-    dom.status = $("#board-status");
     dom.icon = $("link[rel='icon']");
     dom.stats = [...document.querySelectorAll("[data-stat]")];
     dom.sorts = {};
@@ -576,32 +643,47 @@
     dom.count = document.createElement("span");
     dom.count.className = "status__count";
     dom.post = document.createTextNode("");
-    dom.status.replaceChildren(dom.pre, dom.count, dom.post);
-    document.querySelectorAll(".tile").forEach((el, i) => {
+    $("#board-status").replaceChildren(dom.pre, dom.count, dom.post);
+    document.querySelectorAll(".tile").forEach((el) => {
       const { id, hue, shade } = el.dataset;
-      el.tabIndex = i ? -1 : 0;
-      tiles.push({ el, id: +id, hue: +hue, shade: +shade, status: "home" });
+      tiles.push({
+        el,
+        id: Number(id),
+        hue: Number(hue),
+        shade: Number(shade),
+        status: "home",
+      });
     });
     state.tabbable = tiles[0];
+    state.tabbable.el.tabIndex = 0;
     readHash();
     buildOrder();
     layout();
     if (state.messActive) placeScatter(STILL);
-    else order.forEach((tile, i) => setHome(tile, { ...STILL, z: i + 1 }));
+    else
+      state.order.forEach((tile, i) => setHome(tile, { ...STILL, z: i + 1 }));
+    // A seeded page may already be painted: its hand-off is drawn, not faded
+    const verbs = [dom.scatter, dom.tidy];
+    verbs.forEach((b) => (b.style.transition = "none"));
     renderStatus();
+    void dom.tidy.offsetWidth;
+    verbs.forEach((b) => (b.style.transition = ""));
+    renderSort();
     renderTheme();
     dom.board.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointercancel", onPointerUp);
-    // Non-passive so a finger that has lifted a tile moves the tile, not the page; before the lift it scrolls freely
-    const guard = (e) => state.drag && state.drag.lifted && e.preventDefault();
+    // Non-passive so a finger that has lifted a tile moves the tile, not the
+    // page; before the lift the page scrolls freely
+    const guard = (e) =>
+      state.drag && state.drag.lifted && e.cancelable && e.preventDefault();
     dom.board.addEventListener("touchmove", guard, { passive: false });
     const noMenu = (e) => e.target.closest(".tile") && e.preventDefault();
     dom.board.addEventListener("contextmenu", noMenu);
     dom.board.addEventListener("transitionend", onTransitionEnd);
-    dom.board.addEventListener("focusin", syncMarker);
-    dom.board.addEventListener("focusout", syncMarker);
+    dom.board.addEventListener("focusin", onFocusIn);
+    dom.board.addEventListener("focusout", syncFocus);
     dom.scatter.addEventListener("click", scatter);
     dom.tidy.addEventListener("click", tidy);
     dom.copy.addEventListener("click", copyLink);
@@ -609,6 +691,9 @@
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", (e) => pressKeycap(keyName(e), false));
     window.addEventListener("blur", onBlur);
+    // The permalink wins over #top, #board and a hand-edited hash
+    window.addEventListener("hashchange", writeHash);
+    writeHash();
     darkScheme.addEventListener("change", renderTheme);
     reduced.addEventListener("change", placeAll);
     new ResizeObserver(() => layout() && placeAll()).observe(dom.figure);

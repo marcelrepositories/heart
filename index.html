@@ -1,4 +1,3 @@
-<!-- [html-validate-disable doctype-style, void-style -- Prettier prints a lowercase doctype and self-closing void tags] -->
 <!doctype html>
 <html lang="en">
   <head>
@@ -13,7 +12,7 @@
     <meta
       name="theme-color"
       media="(prefers-color-scheme: light)"
-      content="#F6F5F2"
+      content="#f6f5f2"
     />
     <meta
       name="theme-color"
@@ -74,7 +73,7 @@
     </header>
     <main id="top" class="wrap">
       <section class="hero" aria-labelledby="hero-title">
-        <div class="hero__text">
+        <div>
           <h1 id="hero-title">Make a mess. Then put it away.</h1>
           <p class="lede">
             Thirty-six tiles, one home each. Drag them anywhere. Press Tidy and
@@ -95,7 +94,8 @@
             aria-describedby="board-status"
             tabindex="-1"
           >
-            <!-- Tile colours: p = (i * 11) % 36; hue = p % 6; shade = floor(p / 6) -->
+            <!-- Tile colours, from the id i:
+              p = (i * 11) % 36; hue = p % 6; shade = floor(p / 6) -->
             <button
               type="button"
               class="tile"
@@ -103,6 +103,7 @@
               data-hue="0"
               data-shade="0"
               aria-label="Tile 01, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">01</span></span>
             </button>
@@ -113,6 +114,7 @@
               data-hue="5"
               data-shade="1"
               aria-label="Tile 02, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">02</span></span>
             </button>
@@ -123,6 +125,7 @@
               data-hue="4"
               data-shade="3"
               aria-label="Tile 03, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">03</span></span>
             </button>
@@ -133,6 +136,7 @@
               data-hue="3"
               data-shade="5"
               aria-label="Tile 04, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">04</span></span>
             </button>
@@ -143,6 +147,7 @@
               data-hue="2"
               data-shade="1"
               aria-label="Tile 05, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">05</span></span>
             </button>
@@ -153,6 +158,7 @@
               data-hue="1"
               data-shade="3"
               aria-label="Tile 06, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">06</span></span>
             </button>
@@ -163,6 +169,7 @@
               data-hue="0"
               data-shade="5"
               aria-label="Tile 07, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">07</span></span>
             </button>
@@ -173,6 +180,7 @@
               data-hue="5"
               data-shade="0"
               aria-label="Tile 08, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">08</span></span>
             </button>
@@ -183,6 +191,7 @@
               data-hue="4"
               data-shade="2"
               aria-label="Tile 09, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">09</span></span>
             </button>
@@ -193,6 +202,7 @@
               data-hue="3"
               data-shade="4"
               aria-label="Tile 10, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">10</span></span>
             </button>
@@ -203,6 +213,7 @@
               data-hue="2"
               data-shade="0"
               aria-label="Tile 11, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">11</span></span>
             </button>
@@ -213,6 +224,7 @@
               data-hue="1"
               data-shade="2"
               aria-label="Tile 12, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">12</span></span>
             </button>
@@ -223,6 +235,7 @@
               data-hue="0"
               data-shade="4"
               aria-label="Tile 13, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">13</span></span>
             </button>
@@ -233,6 +246,7 @@
               data-hue="5"
               data-shade="5"
               aria-label="Tile 14, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">14</span></span>
             </button>
@@ -243,6 +257,7 @@
               data-hue="4"
               data-shade="1"
               aria-label="Tile 15, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">15</span></span>
             </button>
@@ -253,6 +268,7 @@
               data-hue="3"
               data-shade="3"
               aria-label="Tile 16, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">16</span></span>
             </button>
@@ -263,6 +279,7 @@
               data-hue="2"
               data-shade="5"
               aria-label="Tile 17, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">17</span></span>
             </button>
@@ -273,6 +290,7 @@
               data-hue="1"
               data-shade="1"
               aria-label="Tile 18, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">18</span></span>
             </button>
@@ -283,6 +301,7 @@
               data-hue="0"
               data-shade="3"
               aria-label="Tile 19, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">19</span></span>
             </button>
@@ -293,6 +312,7 @@
               data-hue="5"
               data-shade="4"
               aria-label="Tile 20, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">20</span></span>
             </button>
@@ -303,6 +323,7 @@
               data-hue="4"
               data-shade="0"
               aria-label="Tile 21, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">21</span></span>
             </button>
@@ -313,6 +334,7 @@
               data-hue="3"
               data-shade="2"
               aria-label="Tile 22, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">22</span></span>
             </button>
@@ -323,6 +345,7 @@
               data-hue="2"
               data-shade="4"
               aria-label="Tile 23, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">23</span></span>
             </button>
@@ -333,6 +356,7 @@
               data-hue="1"
               data-shade="0"
               aria-label="Tile 24, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">24</span></span>
             </button>
@@ -343,6 +367,7 @@
               data-hue="0"
               data-shade="2"
               aria-label="Tile 25, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">25</span></span>
             </button>
@@ -353,6 +378,7 @@
               data-hue="5"
               data-shade="3"
               aria-label="Tile 26, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">26</span></span>
             </button>
@@ -363,6 +389,7 @@
               data-hue="4"
               data-shade="5"
               aria-label="Tile 27, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">27</span></span>
             </button>
@@ -373,6 +400,7 @@
               data-hue="3"
               data-shade="1"
               aria-label="Tile 28, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">28</span></span>
             </button>
@@ -383,6 +411,7 @@
               data-hue="2"
               data-shade="3"
               aria-label="Tile 29, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">29</span></span>
             </button>
@@ -393,6 +422,7 @@
               data-hue="1"
               data-shade="5"
               aria-label="Tile 30, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">30</span></span>
             </button>
@@ -403,6 +433,7 @@
               data-hue="0"
               data-shade="1"
               aria-label="Tile 31, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">31</span></span>
             </button>
@@ -413,6 +444,7 @@
               data-hue="5"
               data-shade="2"
               aria-label="Tile 32, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">32</span></span>
             </button>
@@ -423,6 +455,7 @@
               data-hue="4"
               data-shade="4"
               aria-label="Tile 33, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">33</span></span>
             </button>
@@ -433,6 +466,7 @@
               data-hue="3"
               data-shade="0"
               aria-label="Tile 34, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">34</span></span>
             </button>
@@ -443,6 +477,7 @@
               data-hue="2"
               data-shade="2"
               aria-label="Tile 35, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">35</span></span>
             </button>
@@ -453,6 +488,7 @@
               data-hue="1"
               data-shade="4"
               aria-label="Tile 36, in place"
+              tabindex="-1"
             >
               <span class="tile__face"><span class="tile__num">36</span></span>
             </button>
@@ -581,10 +617,11 @@
         </div>
         <!-- Byte figure: update after the final weigh-in. -->
         <p class="stat-row">
-          Tile <span data-stat="tile">70</span> px · Gap
-          <span data-stat="gap">8</span> px · Board
-          <span data-stat="side">480</span> px · 36 tiles · 3 files · 0 requests
-          · 56 KB
+          Tile&nbsp;<span data-stat="tile">70</span>&nbsp;px&nbsp;·
+          Gap&nbsp;<span data-stat="gap">8</span>&nbsp;px&nbsp;·
+          Board&nbsp;<span data-stat="side">480</span>&nbsp;px&nbsp;·
+          36&nbsp;tiles&nbsp;· 3&nbsp;files&nbsp;· 0&nbsp;requests&nbsp;·
+          61&nbsp;KB
         </p>
         <p>
           No framework, no build step, no fonts fetched, nothing tracked. Your

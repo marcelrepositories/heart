@@ -10,6 +10,7 @@
   --accent: #2f55d4;
   --tint: var(--surface);
   --shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.16);
+  --glyph-turn: 0deg;
   --h0: #e39a93; /* red */
   --h1: #e3b36a; /* amber */
   --h2: #9fc98f; /* green */
@@ -39,6 +40,7 @@
   --gutter: 16px;
   --column: 1024px;
   --radius: 4px;
+  --radius-inner: calc(var(--radius) - 1px);
   --radius-board: 8px;
   --font-sans:
     Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
@@ -48,7 +50,8 @@
     "DejaVu Sans Mono", monospace;
 }
 
-/* Dark tokens twice: once for a system preference with no stored choice, once for a stored choice; both scoped to screen so print keeps the light tokens */
+/* Dark tokens twice: for a system preference with no stored choice, then for
+   a stored choice; both scoped to screen so print keeps the light tokens */
 @media screen and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #121212;
@@ -59,6 +62,7 @@
     --line-strong: #6b6b67;
     --accent: #8fa8ff;
     --shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --glyph-turn: 180deg;
     --h0: #8e3b38;
     --h1: #765420;
     --h2: #2f6a3f;
@@ -78,6 +82,7 @@
     --line-strong: #6b6b67;
     --accent: #8fa8ff;
     --shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --glyph-turn: 180deg;
     --h0: #8e3b38;
     --h1: #765420;
     --h2: #2f6a3f;
@@ -183,6 +188,12 @@ h3 {
   color: var(--ink-2);
 }
 
+.lede,
+.section p,
+.keys dd {
+  text-wrap: pretty;
+}
+
 .hint,
 .section__num,
 .stat-row,
@@ -224,19 +235,23 @@ h3 {
   border: 1px solid var(--line-strong);
   border-bottom-width: 2px;
   border-radius: var(--radius);
-  transition:
-    transform var(--dur-key) linear,
-    border-bottom-width var(--dur-key) linear;
+  transition: transform var(--dur-key) linear;
 }
 
 /* Focus */
-:focus-visible {
+:focus-visible,
+.seg input:focus-visible + .seg__label {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 :focus:not(:focus-visible) {
   outline: none;
+}
+
+/* A tile's ring sits inside its box, where the board's clip cannot cut it */
+.tile:focus-visible {
+  outline-offset: -2px;
 }
 
 /* Skip link */
@@ -281,17 +296,7 @@ h3 {
 
 .btn__glyph {
   fill: currentColor;
-  transform: rotate(0deg);
-}
-
-:root[data-theme="dark"] .btn__glyph {
-  transform: rotate(180deg);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .btn__glyph {
-    transform: rotate(180deg);
-  }
+  transform: rotate(var(--glyph-turn));
 }
 
 /* Hero */
@@ -310,7 +315,7 @@ h3 {
   margin-bottom: var(--s2);
 }
 
-.lede {
+.hero .lede {
   margin-bottom: var(--s1);
 }
 
@@ -333,29 +338,37 @@ h3 {
   --ease: linear;
   --delay: 0ms;
   --dot: var(--line-strong);
+  --pitch: calc(var(--tile) + var(--gap));
   position: relative;
   width: var(--side);
   height: var(--side);
-  overflow: hidden;
+  overflow: clip;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-board);
   transition: border-color var(--dur-flash) var(--ease-ui);
 }
 
-.board::before {
+.board::before,
+.board::after {
   content: "";
   position: absolute;
   inset: var(--inset);
   background-image: radial-gradient(circle, var(--dot) 1px, transparent 1.5px);
-  background-size: calc(var(--tile) + var(--gap)) calc(var(--tile) + var(--gap));
-  background-position: calc(var(--tile) / 2 - (var(--tile) + var(--gap)) / 2)
-    calc(var(--tile) / 2 - (var(--tile) + var(--gap)) / 2);
-  transition: background-image var(--dur-ui) var(--ease-ui);
+  background-size: var(--pitch) var(--pitch);
+  background-position: calc((var(--tile) - var(--pitch)) / 2)
+    calc((var(--tile) - var(--pitch)) / 2);
 }
 
-.figure:has(.btn--tidy:focus-visible) .board::before {
+/* The Tidy preview is a second set of dots fading in: a gradient cannot fade */
+.board::after {
   --dot: var(--ink-2);
+  opacity: 0;
+  transition: opacity var(--dur-ui) var(--ease-ui);
+}
+
+.figure:has(.btn--tidy:focus-visible) .board::after {
+  opacity: 1;
 }
 
 .tile {
@@ -370,6 +383,16 @@ h3 {
 .tile__face {
   position: absolute;
   inset: 0;
+  transform: rotate(var(--r)) scale(var(--s));
+  transition:
+    transform var(--dur) var(--ease) var(--delay),
+    box-shadow var(--dur-lift) var(--ease-ui),
+    border-color var(--dur-ui) var(--ease-ui);
+}
+
+/* One face skin for the board tiles and the rules' mini tiles */
+.tile__face,
+.mini {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -377,11 +400,6 @@ h3 {
   background: var(--hue);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  transform: rotate(var(--r)) scale(var(--s));
-  transition:
-    transform var(--dur) var(--ease) var(--delay),
-    box-shadow var(--dur-lift) var(--ease-ui),
-    border-color var(--dur-ui) var(--ease-ui);
 }
 
 .tile__face::before,
@@ -391,7 +409,7 @@ h3 {
   inset: 0;
   z-index: -1;
   background: var(--tint);
-  border-radius: calc(var(--radius) - 1px);
+  border-radius: var(--radius-inner);
   opacity: var(--tint-opacity);
 }
 
@@ -454,7 +472,6 @@ h3 {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 50;
   width: var(--tile);
   height: var(--tile);
   border-radius: var(--radius);
@@ -508,6 +525,12 @@ h3 {
   color: var(--ink-2);
 }
 
+.btn--primary .kbd {
+  color: var(--line-strong);
+  background: transparent;
+  border-color: var(--ink-2);
+}
+
 /* Segmented control */
 .seg {
   display: flex;
@@ -522,11 +545,18 @@ h3 {
   padding: 7px 16px;
   font-weight: 600;
   text-align: center;
-  border-radius: calc(var(--radius) - 1px);
   cursor: pointer;
   transition:
     background-color var(--dur-ui) var(--ease-ui),
     color var(--dur-ui) var(--ease-ui);
+}
+
+.seg__label:first-of-type {
+  border-radius: var(--radius-inner) 0 0 var(--radius-inner);
+}
+
+.seg__label:last-of-type {
+  border-radius: 0 var(--radius-inner) var(--radius-inner) 0;
 }
 
 .seg input:checked + .seg__label {
@@ -534,17 +564,13 @@ h3 {
   background: var(--ink);
 }
 
-.seg input:focus-visible + .seg__label {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* Status line */
+/* Status line: one fixed row, so a label that wraps never moves the page */
 .status {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  column-gap: var(--s2);
+  column-gap: var(--s1);
+  height: 24px;
   margin-top: var(--s1);
 }
 
@@ -553,7 +579,8 @@ h3 {
 }
 
 .status__copy {
-  min-width: 144px;
+  min-width: 4.5em;
+  margin-left: auto;
   text-align: right;
   text-decoration: underline;
   text-decoration-color: var(--line-strong);
@@ -581,7 +608,6 @@ h3 {
 
 .section p {
   max-width: 60ch;
-  text-wrap: pretty;
 }
 
 /* Rules */
@@ -597,19 +623,12 @@ h3 {
 
 .mini {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  isolation: isolate;
   width: 32px;
   height: 32px;
   margin-bottom: var(--s2);
   font-size: 11px;
   line-height: 16px;
   font-weight: 600;
-  background: var(--hue);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
 }
 
 .rule h3 {
@@ -653,7 +672,7 @@ h3 {
 }
 
 /* States */
-.tile.is-lifted {
+html.js .tile.is-lifted {
   cursor: grabbing;
   transition: none;
 }
@@ -671,6 +690,8 @@ h3 {
   border-color: var(--accent);
 }
 
+/* Border and margin swap in one frame (a border width cannot interpolate), so
+   the box stays 24px; only the slide is a transition */
 .kbd.is-down {
   margin-bottom: 1px;
   border-bottom-width: 1px;
@@ -682,13 +703,15 @@ h3 {
   transition: none;
 }
 
-/* Theme cross-fade, scoped to a deliberate toggle and never on *, which would replace the tiles' transform transition */
+/* Theme cross-fade, scoped to a deliberate toggle and never on *, which would
+   replace the tiles' transform transition */
 html.theming body,
 html.theming .site-header,
 html.theming .lede,
 html.theming .hint,
 html.theming .board,
 html.theming .btn,
+html.theming .seg,
 html.theming .seg__label,
 html.theming .kbd,
 html.theming .tile__face::before,
@@ -740,11 +763,16 @@ html:not(.js) .board {
 }
 
 html:not(.js) .board::before,
-html:not(.js) .slot-marker {
+html:not(.js) .board::after,
+html:not(.js) .slot-marker,
+html:not(.js) .verbs,
+html:not(.js) .status__copy,
+html:not(.js) .btn--theme,
+html:not(.js) .hint {
   display: none;
 }
 
-/* Reduced motion: tile motion and stagger stop; colour and opacity fades stay */
+/* Reduced motion: no tile motion or stagger; colour and opacity still fade */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --dur-lift: 0ms;
@@ -762,6 +790,25 @@ html:not(.js) .slot-marker {
 
   html.theming .btn__glyph {
     transition: none;
+  }
+}
+
+/* Forced colours: system colours for the chosen sort, the marker and dots */
+@media (forced-colors: active) {
+  .seg input:checked + .seg__label {
+    forced-color-adjust: none;
+    color: HighlightText;
+    background: Highlight;
+  }
+
+  .slot-marker {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .board::before {
+    --dot: CanvasText;
+    forced-color-adjust: none;
   }
 }
 
@@ -784,17 +831,17 @@ html:not(.js) .slot-marker {
     text-decoration-color: var(--ink);
   }
 
-  .tile:hover .tile__face {
+  html.js .tile:hover .tile__face {
     border-color: var(--line-strong);
   }
 
-  .figure:has(.btn--tidy:hover) .board::before {
-    --dot: var(--ink-2);
+  .figure:has(.btn--tidy:hover) .board::after {
+    opacity: 1;
   }
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .tile {
+  html.js .tile {
     cursor: grab;
   }
 
@@ -819,11 +866,6 @@ html:not(.js) .slot-marker {
     flex: 0 0 auto;
     margin-left: auto;
   }
-
-  .keys {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: var(--s4);
-  }
 }
 
 @media (min-width: 600px) {
@@ -842,11 +884,18 @@ html:not(.js) .slot-marker {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     column-gap: var(--s4);
   }
+
+  .keys {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, 1fr);
+    grid-auto-flow: column;
+    column-gap: var(--s4);
+  }
 }
 
 @media (min-width: 880px) {
   .hero {
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 480px);
+    grid-template-columns: minmax(320px, 1fr) minmax(320px, 480px);
     column-gap: var(--s5);
     align-items: start;
     padding-top: var(--s6);
@@ -879,7 +928,7 @@ html:not(.js) .slot-marker {
   }
 }
 
-/* Print: light tokens (the dark blocks are screen-only), no controls, the board as it stands */
+/* Print: light tokens, no controls, the board as it stands */
 @media print {
   :root {
     color-scheme: light;
